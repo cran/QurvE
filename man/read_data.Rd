@@ -27,12 +27,20 @@ read_data(
 )
 }
 \arguments{
-\item{data.growth}{An R dataframe object or a table file with extension '.xlsx', '.xls', '.csv', '.tsv', or '.txt' containing growth data.
-The first three table rows contain
+\item{data.growth}{An R dataframe object or a table file with extension '.xlsx', '.xls', '.csv', '.tsv', or '.txt' containing growth data. The data must be either in the '\code{QurvE} custom layout' or in 'tidy' (long) format.
+The first three table rows in the 'custom \code{QurvE} layout' contain:
 \enumerate{
-\item sample description
-\item replicate number (\emph{optional}: followed by a letter to indicate technical replicates)
-\item concentration value (\emph{optional})
+\item Sample description
+\item Replicate number (\emph{optional}: followed by a letter to indicate technical replicates)
+\item Concentration value (\emph{optional})
+}
+Data in 'tidy' format requires the following column headers:
+\enumerate{
+\item "Time": time values
+\item "Description": sample description
+\item "Replicate": replicate number (\emph{optional})
+\item "Concentration": concentration value (\emph{optional})
+\item "Values": growth values (e.g., optical density)
 }}
 
 \item{data.fl}{(optional) An R dataframe object or a table file with extension '.xlsx', '.xls', '.csv', '.tsv', or '.txt' containing fluorescence data. Table layout must mimic that of \code{data.growth}.}
@@ -83,9 +91,10 @@ object, in \code{\link{growth.gcFit}}/\code{\link{flFit}}.
 data_growth <- read_data(data.growth = system.file("2-FMA_toxicity.csv",
                          package = "QurvE"), csvsep = ";" )
 
-# Load XLSX file containing both growth and fluorescence data
-data_growth_fl <- read_data(data.growth = system.file("lac_promoters.xlsx", package = "QurvE"),
-                            sheet.growth = "OD",
-                            data.fl = system.file("lac_promoters.xlsx", package = "QurvE"),
-                            sheet.fl = 2)
+# Load XLS file containing both growth and fluorescence data
+data_growth_fl <- read_data(
+                    data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+                    data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+                    csvsep = "\t",
+                    csvsep.fl = "\t")
 }

@@ -42,13 +42,16 @@ fl.report(
 \description{
 \code{fl.report} requires a \code{flFitRes} object and creates a report in PDF and HTML format that summarizes all results obtained.
 }
+\details{
+The template .Rmd file used within this function can be found within the QurvE package installation directory.
+}
 \examples{
 # load example dataset
-\donttest{
-input <- read_data(data.growth = system.file('lac_promoters.xlsx', package = 'QurvE'),
-                   data.fl = system.file('lac_promoters.xlsx', package = 'QurvE'),
-                   sheet.growth = 1,
-                   sheet.fl = 2 )
+\dontrun{
+input <- read_data(data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+                   data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+                   csvsep = "\t",
+                   csvsep.fl = "\t")
 
 # Run workflow
 res <- fl.workflow(grodata = input, ec50 = FALSE, fit.opt = 's',

@@ -24,6 +24,7 @@ library(shinyFiles, quietly = T)
 library(shinyjs, quietly = T)
 library(shinythemes, quietly = T)
 library(ggplot2, quietly = T)
+library(magrittr)
 
 # Define icon set from custom SVG files
 # iconset <- icons::icon_set("icons/")
@@ -604,9 +605,12 @@ ui <- fluidPage(theme = shinythemes::shinytheme(theme = "spacelab"),
                                                           )
                                                         ),
 
-                                                        selectInput(inputId = 'norm_type_parse',
+                                                        conditionalPanel(
+                                                          condition = "input.parsed_reads_fluorescence.length > 0 && input.parsed_reads_fluorescence != 'Ignore'",
+                                                          selectInput(inputId = 'norm_type_parse',
                                                                       label = 'Select Read for fluorescence normalization',
-                                                                      choices = ""),
+                                                                      choices = "")
+                                                        ),
 
                                                         tags$div(title="Shall blank values (the mean of samples identified by 'Blank' IDs) be subtracted from values within the same experiment?",
                                                                  checkboxInput(inputId = 'subtract_blank_plate_reader',
@@ -5685,12 +5689,12 @@ ui <- fluidPage(theme = shinythemes::shinytheme(theme = "spacelab"),
                         tabPanel("About Us",
                                  mainPanel(
                                    h2("Creators"),
-                                   'Nicolas Wirth', tags$a(icon("twitter"), href="https://twitter.com/JonathanFunk12"), br(),
-                                   'Jonathan Funk', tags$a(icon("twitter"), href="https://twitter.com/The_NiWi"),
+                                   'Nicolas Wirth', tags$a(icon("twitter"), href="https://twitter.com/The_NiWi"), br(),
+                                   'Jonathan Funk', tags$a(icon("twitter"), href="https://twitter.com/JonathanFunk12"),
                                    h2("Bug reports"),
                                    uiOutput("bug_report"),
                                    h2("Cite QurvE"),
-                                   "Wirth, N. and Funk, J. (2023). QurvE: Robust and User-Friendly Analysis of Growth and Fluorescence Curves. R package version 1.0. https://CRAN.R-project.org/package=QurvE"
+                                   "Wirth, N.T., Funk, J., Donati, S. et al. QurvE: user-friendly software for the analysis of biological growth and fluorescence data. Nat Protoc (2023). https://doi.org/10.1038/s41596-023-00850-7"
                                    # h2("Publications"),
                                    # ''
                                  )
@@ -5704,23 +5708,6 @@ ui <- fluidPage(theme = shinythemes::shinytheme(theme = "spacelab"),
 #____SERVER____####
 
 server <- function(input, output, session){
-
-  # Notify about new QurvE version on Github
-  # observe({
-  #   github_version <- gsub("Version: ", "", unlist(str_split(remotes:::github_DESCRIPTION(username = "NicWir", repo = "QurvE", pat = "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"), "\\n"))[grep("Version", unlist(str_split(remotes:::github_DESCRIPTION(username = "NicWir", repo = "QurvE", pat = "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"), "\\n")))])
-  #   installed_version <- paste(utils::packageVersion("QurvE"))
-  #   if(github_version > installed_version){
-  #     showModal(
-  #       modalDialog(
-  #         paste0(
-  #           "Your installed QurvE is outdated! A new version (",
-  #           github_version,
-  #           ") is available on Github. You can install the most recent development version by executing devtools::install_github('NicWir/QurvE') in R and start the app via QurvE::run_app()."
-  #         ), easyClose = T
-  #       )
-  #     )
-  #   }
-  # })
 
   # Disable navbar menus before running computations
   shinyjs::disable(selector = "#navbar li a[data-value=tabPanel_Export_RData]")
@@ -6392,88 +6379,6 @@ server <- function(input, output, session){
                   escape = FALSE, rownames = c("Condition", "Replicate", "Concentration", rep("", nrow(table_fl)-3)))
   })
 
-  ### Render custom fluorescence 2 table
-  # output$custom_table_fluorescence2 <- DT::renderDT({
-  #   inFile <- input$custom_file_fluorescence2
-  #
-  #   if(is.null(inFile))
-  #     return(NULL)
-  #
-  #   filename <- inFile$datapath
-  #   dec <- input$decimal_separator_custom_fluorescence2
-  #   csvsep <- input$separator_custom_fluorescence2
-  #   if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "csv") {
-  #     f2 <-
-  #       utils::read.csv(
-  #         filename,
-  #         dec = dec,
-  #         sep = csvsep,
-  #         header = FALSE,
-  #         stringsAsFactors = FALSE,
-  #         fill = T,
-  #         na.strings = "",
-  #         quote = "",
-  #         comment.char = "",
-  #         check.names = F
-  #       )
-  #   } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "xls" |
-  #              stringr::str_replace(filename, ".{1,}\\.", "") == "xlsx") {
-  #     showModal(modalDialog("Reading data file...", footer=NULL))
-  #     f2 <- data.frame(suppressMessages(readxl::read_excel(filename, col_names = FALSE, sheet = input$custom_fluorescence2_sheets, progress = T)))
-  #     removeModal()
-  #   } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "tsv") {
-  #     f2 <-
-  #       utils::read.csv(
-  #         filename,
-  #         dec = dec,
-  #         sep = "\t",
-  #         header = FALSE,
-  #         stringsAsFactors = FALSE,
-  #         fill = T,
-  #         na.strings = "",
-  #         quote = "",
-  #         comment.char = "",
-  #         check.names = F
-  #       )
-  #   } else if (stringr::str_replace_all(filename, ".{1,}\\.", "") == "txt") {
-  #     f2 <-
-  #       utils::read.table(
-  #         filename,
-  #         dec = dec,
-  #         sep = "\t",
-  #         header = FALSE,
-  #         stringsAsFactors = FALSE,
-  #         fill = T,
-  #         na.strings = "",
-  #         quote = "",
-  #         comment.char = "",
-  #         check.names = F
-  #       )
-  #   }
-  #   f2[-(1:3),] <- apply(f2[-(1:3),], 2, as.numeric) %>% apply(., 2, round, digits = 2)
-  #
-  #   #### Render experimental design table
-  #   if(!exists("output$custom_data_table_expdesign")){
-  #     output$custom_data_table_expdesign <- DT::renderDT({
-  #
-  #       f2.mat <- t(f2)
-  #       label <- unlist(lapply(1:nrow(f2.mat), function(x) paste(f2.mat[x,1], f2.mat[x,2], f2.mat[x,3], sep = " | ")))
-  #       condition <- f2.mat[, 1]
-  #       replicate <- f2.mat[, 2]
-  #       concentration <- f2.mat[, 3]
-  #
-  #       expdesign <- data.frame(label, condition, replicate, concentration, check.names = FALSE)
-  #
-  #       expdesign[-1, ]
-  #     })
-  #   }
-  #
-  #   colnames(f2)[1] <- "Time"
-  #   f2[1,1] <- ""
-  #   DT::datatable(f2,
-  #             options = list(pageLength = 25, info = FALSE, lengthMenu = list(c(15, 25, 50, -1), c("15","25", "50", "All")) ),
-  #             escape = FALSE, rownames = c("Condition", "Replicate", "Concentration", rep("", nrow(f2)-3)))
-  # })
 
   custom_raw_growth_plot <- reactive({
     if(is.null(results$custom_data) || length(results$custom_data$growth) < 2) return(NULL)
@@ -10493,7 +10398,7 @@ server <- function(input, output, session){
     if(is.null(input$custom_colors_group_plot) || is.na(input$custom_colors_group_plot) || input$custom_colors_group_plot == ""){
       cols <- NULL
     } else {
-      cols <- unlist(str_split(input$custom_colors_group_plot, ",|;"))
+      cols <- toupper(unlist(str_split(input$custom_colors_group_plot, ", |; |,|;")))
     }
     if(input$select_string_visualize_growth_group){
       suppressWarnings(
@@ -11109,138 +11014,6 @@ server <- function(input, output, session){
     contentType = ifelse(input$format_download_dose_response_growth_plot_individual == ".pdf", "image/pdf", "image/png")
   )
 
-  # observeEvent(input$rerun_dr_spline_individual, {
-  #
-  #   select_options <- c()
-  #   if(any("l" %in% results$growth$control$fit.opt)) select_options <- c(select_options, 'mu.linfit', 'lambda.linfit', 'dY.linfit',
-  #                                                                        'A.linfit')
-  #   if(any("s" %in% results$growth$control$fit.opt)) select_options <- c(select_options, 'mu.spline', 'lambda.spline',
-  #                                                                        'A.spline', 'dY.spline', 'integral.spline')
-  #   if(any("m" %in% results$growth$control$fit.opt)) select_options <- c(select_options, 'mu.model', 'lambda.model', 'A.model', 'integral.model')
-  #
-  #   # display a modal dialog with a header, textinput and action buttons
-  #   showModal(
-  #     modalDialog(
-  #       tags$h2('Please enter adjusted parameters'),
-  #
-  #       textInput(inputId = "dr_method_growth_rerun_individual",
-  #                   label = "Method", value = results$growth$drFit$control$dr.method),
-  #
-  #       bsPopover(id = "dr_method_growth_rerun_individual",
-  #                 title = HTML("<em>dr.method</em>"),
-  #                 placement = "right",
-  #                 content = "To change the method for the dose-response analysis, please re-run the Computation workflow or select [Combine conditions into a single plot] and click [Re-run]."),
-  #
-  #       selectInput(inputId = "response_parameter_growth_rerun_individual",
-  #                   label = "Response Parameter",
-  #                   choices = select_options,
-  #                   selected =  results$growth$drFit$control$dr.parameter),
-  #       bsPopover(id = "response_parameter_growth_rerun_individual", title = HTML("<em>dr.parameter</em>"), content = "Choose the response parameter to be used for creating a dose response curve.", placement = "top"),
-  #
-  #       conditionalPanel(
-  #         condition = 'input.dr_method_growth_rerun_individual == "spline"',
-  #         tags$div(title="Perform a log(x+1) transformation on concentration values.",
-  #                  checkboxInput(inputId = 'log_transform_concentration_growth_rerun_individual',
-  #                                label = 'Log transform concentration',
-  #                                value =  results$growth$drFit$control$log.x.dr)
-  #         ),
-  #
-  #         tags$div(title="Perform a log(y+1) transformation on response values.",
-  #                  checkboxInput(inputId = 'log_transform_response_growth_rerun_individual',
-  #                                label = 'Log transform response',
-  #                                value =  results$growth$drFit$control$log.y.dr)
-  #         ),
-  #
-  #         textInput(
-  #           inputId = 'smoothing_factor_growth_dr_rerun_individual',
-  #           label = 'Smoothing factor dose-response splines',
-  #           value = "",
-  #           placeholder = "NULL (choose automatically)"
-  #         ),
-  #         bsPopover(id = "smoothing_factor_growth_dr_rerun_individual", title = HTML("<em>smooth.dr</em>"), content = "\\'spar\\' argument in the R function smooth.spline() used to create the dose response curve."),
-  #
-  #         QurvE:::numberInput(
-  #           inputId = 'number_of_bootstrappings_dr_growth_rerun_individual',
-  #           label = 'Number of bootstrappings',
-  #           value = 0,
-  #           min = NA,
-  #           max = NA,
-  #           placeholder = 0
-  #         ),
-  #         bsPopover(id = "number_of_bootstrappings_dr_growth_rerun_individual", title = HTML("<em>nboot.dr</em>"), content = "Optional: Define the number of bootstrap samples for EC50 estimation. Bootstrapping resamples the values in a dataset with replacement and performs a spline fit for each bootstrap sample to determine the EC50.")
-  #       ), #conditionalPanel(condition = 'input.dr_method_growth_rerun == "spline"')
-  #       footer=tagList(
-  #         fluidRow(
-  #           column(12,
-  #                  div(
-  #                    actionButton('submit.rerun.dr.spline.individual', 'Submit'),
-  #                    style="float:right"),
-  #                  div(
-  #                    modalButton('cancel'),
-  #                    style="float:right")
-  #
-  #           )
-  #         )
-  #       )
-  #     )
-  #   )
-  # })
-  #
-  #
-  # # Re-run selected linear fit with user-defined parameters upon click on 'submit'
-  # observeEvent(input$submit.rerun.dr.spline.individual, {
-  #   if(!is.null(results$growth$drFit)){
-  #
-  #     showModal(modalDialog("Performing dose-reponse analysis...", footer = NULL))
-  #
-  #     # store previous fit in memory
-  #     selected_vals_validate_growth$restore_dr_spline_individual <- results$growth$drFit$drFittedSplines[[ifelse(input$individual_plots_dose_response_growth_plot == "1" || is.null(input$individual_plots_dose_response_growth_plot), 1, input$individual_plots_dose_response_growth_plot)]]
-  #
-  #     # Re-run fit and store in results object
-  #     gcTable <- results$growth$gcFit$gcTable
-  #     control <- results$growth$drFit$control
-  #     control_new <- control
-  #
-  #     # control_new$dr.method <- input$dr_method_growth_rerun_individual
-  #     control_new$dr.parameter <- input$response_parameter_growth_rerun_individual
-  #     control_new$smooth.dr <- input$smoothing_factor_growth_dr_rerun_individual
-  #     control_new$nboot.dr <- input$number_of_bootstrappings_dr_growth_rerun_individual
-  #     control_new$log.x.dr <- input$log_transform_concentration_growth_rerun_individual
-  #     control_new$log.y.dr <- input$log_transform_response_growth_rerun_individual
-  #
-  #     if(control_new$dr.method == "spline"){
-  #       try(
-  #         results$growth$drFit$drFittedSplines[[ifelse(input$individual_plots_dose_response_growth_plot == "1" || is.null(input$individual_plots_dose_response_growth_plot), 1, input$individual_plots_dose_response_growth_plot)]] <-
-  #           growth.drFitSpline(conc =  results$growth$drFit$drFittedSplines[[ifelse(input$individual_plots_dose_response_growth_plot == "1" || is.null(input$individual_plots_dose_response_growth_plot), 1, input$individual_plots_dose_response_growth_plot)]]$raw.conc,
-  #                              test = results$growth$drFit$drFittedSplines[[ifelse(input$individual_plots_dose_response_growth_plot == "1" || is.null(input$individual_plots_dose_response_growth_plot), 1, input$individual_plots_dose_response_growth_plot)]]$raw.test,
-  #                              drID = results$growth$drFit$drFittedSplines[[ifelse(input$individual_plots_dose_response_growth_plot == "1" || is.null(input$individual_plots_dose_response_growth_plot), 1, input$individual_plots_dose_response_growth_plot)]]$drID,
-  #                              control = control_new)
-  #       )
-  #     } else {
-  #       try(
-  #         results$growth$drFit$drFittedModels[[ifelse(input$individual_plots_dose_response_growth_plot_model == "1" || is.null(input$individual_plots_dose_response_growth_plot_model), 1, input$individual_plots_dose_response_growth_plot_model)]] <-
-  #           growth.drFitModel(conc =  results$growth$drFit$drFittedModels[[ifelse(input$individual_plots_dose_response_growth_plot_model == "1" || is.null(input$individual_plots_dose_response_growth_plot_model), 1, input$individual_plots_dose_response_growth_plot_model)]]$raw.conc,
-  #                              test = results$growth$drFit$drFittedModels[[ifelse(input$individual_plots_dose_response_growth_plot_model == "1" || is.null(input$individual_plots_dose_response_growth_plot_model), 1, input$individual_plots_dose_response_growth_plot_model)]]$raw.test,
-  #                              drID = results$growth$drFit$drFittedModels[[ifelse(input$individual_plots_dose_response_growth_plot_model == "1" || is.null(input$individual_plots_dose_response_growth_plot_model), 1, input$individual_plots_dose_response_growth_plot_model)]]$drID,
-  #                              control = control_new)
-  #       )
-  #     }
-  #
-  #
-  #     # Show [Restore fit] button
-  #     show("restore_dr_spline_individual")
-  #   }
-  #
-  #   removeModal()
-  # })
-  #
-  # # Restore previous linear fit upon click on [Restore Fit]
-  # observeEvent(input$restore_dr_spline_individual, {
-  #   # store previous fit from memory
-  #   results$growth$drFit$drFittedSplines[[ifelse(input$individual_plots_dose_response_growth_plot == "1" || is.null(input$individual_plots_dose_response_growth_plot), 1, input$individual_plots_dose_response_growth_plot)]] <- selected_vals_validate_growth$restore_dr_spline_individual
-  #   hide("restore_dr_spline_individual")
-  # })
-
 
       ### DR Plots (Bootstrap) ####
   observe({
@@ -11337,7 +11110,7 @@ server <- function(input, output, session){
     if(is.null(input$custom_colors_growth_parameter_plot) || is.na(input$custom_colors_growth_parameter_plot) || input$custom_colors_growth_parameter_plot == ""){
       cols <- NULL
     } else {
-      cols <- unlist(str_split(input$custom_colors_growth_parameter_plot, ",|;"))
+      cols <- toupper(unlist(str_split(input$custom_colors_growth_parameter_plot, ", |; |,|;")))
     }
     if(input$select_string_visualize_parameter_growth_plot){
       suppressWarnings(
@@ -11931,7 +11704,7 @@ server <- function(input, output, session){
     if(is.null(input$custom_colors_fluorescence_group_plot) || is.na(input$custom_colors_fluorescence_group_plot) || input$custom_colors_fluorescence_group_plot == ""){
       cols <- NULL
     } else {
-      cols <- unlist(str_split(input$custom_colors_fluorescence_group_plot, ",|;"))
+      cols <- toupper(unlist(str_split(input$custom_colors_fluorescence_group_plot, ", |; |,|;")))
     }
     if(input$data_type_fluorescence_group_plot == "spline" && results$control$x_type == "growth"){
       plot_mean <-  FALSE
@@ -12507,7 +12280,7 @@ server <- function(input, output, session){
         if(is.null(input$custom_colors_fluorescence_parameter_plot) || is.na(input$custom_colors_fluorescence_parameter_plot) || input$custom_colors_fluorescence_parameter_plot == ""){
           cols <- NULL
         } else {
-          cols <- unlist(str_split(input$custom_colors_fluorescence_parameter_plot, ",|;"))
+          cols <- toupper(unlist(str_split(input$custom_colors_fluorescence_parameter_plot, ", |; |,|;")))
         }
         if(input$select_string_visualize_parameter_fluorescence_plot){
           suppressWarnings(
@@ -12988,7 +12761,7 @@ server <- function(input, output, session){
         if(is.null(input$custom_colors_dual_plot) || is.na(input$custom_colors_dual_plot) || input$custom_colors_dual_plot == ""){
           cols <- NULL
         } else {
-          cols <- unlist(str_split(input$custom_colors_dual_plot, ",|;"))
+          cols <- toupper(unlist(str_split(input$custom_colors_dual_plot, ", |; |,|;")))
         }
         if(input$select_string_visualize_dual_plot){
         suppressWarnings(

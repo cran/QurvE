@@ -16,6 +16,10 @@
 #' @param format (Character) Define the file format for the report, PDF (\code{'pdf'}) and/or HTML (\code{'html'}). Default: (\code{c('pdf', 'html')})
 #' @param parallelize (Logical) Create plots using all but one available processor cores (\code{TRUE}) or only a single core (\code{FALSE}).
 #'
+#' @details
+#' The template .Rmd file used within this function can be found within the QurvE package installation directory.
+#'
+#'
 #' @export
 #' @importFrom ggplot2 aes aes_ annotate coord_cartesian element_blank unit element_text geom_bar geom_errorbar geom_line
 #'   geom_point geom_ribbon geom_segment ggplot ggplot_build ggplot ggtitle labs
@@ -32,7 +36,7 @@
 #' @family reports
 #' @return \code{NULL}
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Create random growth data set
 #'   rnd.data <- rdm.data(d = 35, mu = 0.8, A = 5, label = 'Test1')
 #'
@@ -196,28 +200,29 @@ growth.report <- function(
         }
     }
     file <- paste0(Report.wd, "/Report_Growth.Rmd")
-    if (all(
-        c("pdf", "html") %in%
-            format
-    ))
-        {
-        format <- c("html_document", "pdf_document")
-    } else if ("pdf" %in% format)
-    {
-        format <- "pdf_document"
-    } else if ("html" %in% format)
-    {
-        format <- "html_document"
-    } else
-    {
-        stop(
-            "Please define a valid report format, either 'pdf', 'html', or c('pdf', 'html')."
-        )
+
+    # Copy report files into temp directory
+    report_path <- tempfile(fileext = ".Rmd")
+    file.copy(file, report_path, overwrite = TRUE)
+
+    if (all( c("pdf", "html") %in% format )) {
+      format <- c("html_document", "pdf_document")
+    } else if ("pdf" %in% format){
+      format <- "pdf_document"
+    } else if ("html" %in% format){
+      format <- "html_document"
+    } else {
+      stop(
+        "Please define a valid report format, either 'pdf', 'html', or c('pdf', 'html')."
+      )
     }
-    rmarkdown::render(
-        file, output_format = format, output_dir = wd,
+
+
+      rmarkdown::render(
+        input = report_path, output_format = format, output_dir = wd,
         output_file = out.nm, quiet = TRUE
-    )
+      )
+
     message(paste0("Report files saved in: '/", wd, "'"))
     unlink(
         paste0(tempdir(), "/Plots"),
@@ -258,13 +263,14 @@ growth.report <- function(
 #' @import knitr
 #' @include utils.R
 #' @return \code{NULL}
+#' @details The template .Rmd file used within this function can be found within the QurvE package installation directory.
 #' @examples
 #' # load example dataset
-#' \donttest{
-#' input <- read_data(data.growth = system.file('lac_promoters.xlsx', package = 'QurvE'),
-#'                    data.fl = system.file('lac_promoters.xlsx', package = 'QurvE'),
-#'                    sheet.growth = 1,
-#'                    sheet.fl = 2 )
+#' \dontrun{
+#' input <- read_data(data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+#'                    data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+#'                    csvsep = "\t",
+#'                    csvsep.fl = "\t")
 #'
 #' # Run workflow
 #' res <- fl.workflow(grodata = input, ec50 = FALSE, fit.opt = 's',
@@ -450,6 +456,11 @@ fl.report <- function(
         "C:/Users/nicwir/Documents/DTU_Biosustain/Scripts_and_Modelling/curvE package/QurvE/inst/"
     )
     file <- paste0(Report.wd, "/Report_Fluorescence.Rmd")
+
+    # Copy report files into temp directory
+    report_path <- tempfile(fileext = ".Rmd")
+    file.copy(file, report_path, overwrite = TRUE)
+
     if (all(
         c("pdf", "html") %in%
             format
@@ -462,16 +473,17 @@ fl.report <- function(
     } else if ("html" %in% format)
     {
         format <- "html_document"
-    } else
-    {
-        stop(
-            "Please define a valid report format, either 'pdf', 'html', or c('pdf', 'html')."
-        )
+    } else {
+      stop(
+        "Please define a valid report format, either 'pdf', 'html', or c('pdf', 'html')."
+      )
     }
-    rmarkdown::render(
-        file, output_format = format, output_dir = wd,
+
+      rmarkdown::render(
+        report_path, output_format = format, output_dir = wd,
         output_file = out.nm, quiet = TRUE
-    )
+      )
+
     message(paste0("Files saved in: '", wd, "'"))
     unlink(
         paste0(tempdir(), "/Plots"),

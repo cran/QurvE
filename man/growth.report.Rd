@@ -42,8 +42,11 @@ growth.report(
 \description{
 \code{growth.report} requires a \code{grofit} object and creates a report in PDF and HTML format that summarizes all results.
 }
+\details{
+The template .Rmd file used within this function can be found within the QurvE package installation directory.
+}
 \examples{
-\donttest{
+\dontrun{
 # Create random growth data set
   rnd.data <- rdm.data(d = 35, mu = 0.8, A = 5, label = 'Test1')
 

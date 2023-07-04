@@ -2,12 +2,20 @@
 #'
 #' \code{read_data} reads table files or R dataframe objects containing growth and fluorescence data and extracts datasets, sample and group information, performs blank correction, applies data transformation (calibration), and combines technical replicates.
 #'
-#' @param data.growth An R dataframe object or a table file with extension '.xlsx', '.xls', '.csv', '.tsv', or '.txt' containing growth data.
-#' The first three table rows contain
+#' @param data.growth An R dataframe object or a table file with extension '.xlsx', '.xls', '.csv', '.tsv', or '.txt' containing growth data. The data must be either in the '`QurvE` custom layout' or in 'tidy' (long) format.
+#' The first three table rows in the 'custom `QurvE` layout' contain:
 #' \enumerate{
-#'    \item sample description
-#'    \item replicate number (_optional_: followed by a letter to indicate technical replicates)
-#'    \item concentration value (_optional_)
+#'    \item Sample description
+#'    \item Replicate number (_optional_: followed by a letter to indicate technical replicates)
+#'    \item Concentration value (_optional_)
+#' }
+#' Data in 'tidy' format requires the following column headers:
+#' \enumerate{
+#'    \item "Time": time values
+#'    \item "Description": sample description
+#'    \item "Replicate": replicate number (_optional_)
+#'    \item "Concentration": concentration value (_optional_)
+#'    \item "Values": growth values (e.g., optical density)
 #' }
 #' @param data.fl (optional) An R dataframe object or a table file with extension '.xlsx', '.xls', '.csv', '.tsv', or '.txt' containing fluorescence data. Table layout must mimic that of \code{data.growth}.
 #' @param data.fl2 (optional) An R dataframe object or a table file with extension '.xlsx', '.xls', '.csv', '.tsv', or '.txt' containing measurements from a second fluorescence channel (used only to normalize \code{fluorescence} data). Table layout must mimic that of \code{data.growth}.
@@ -46,11 +54,12 @@
 #' data_growth <- read_data(data.growth = system.file("2-FMA_toxicity.csv",
 #'                          package = "QurvE"), csvsep = ";" )
 #'
-#' # Load XLSX file containing both growth and fluorescence data
-#' data_growth_fl <- read_data(data.growth = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                             sheet.growth = "OD",
-#'                             data.fl = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                             sheet.fl = 2)
+#' # Load XLS file containing both growth and fluorescence data
+#' data_growth_fl <- read_data(
+#'                     data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+#'                     data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+#'                     csvsep = "\t",
+#'                     csvsep.fl = "\t")
 read_data <-
   function(data.growth = NA,
            data.fl = NA,
@@ -86,11 +95,15 @@ read_data <-
       dat <- data.growth
     } else {
       # Read table file
-      dat <- read_file(data.growth, csvsep=csvsep, dec=dec, sheet=sheet.growth)
+      if(!is.na(data.growth))
+        dat <- read_file(data.growth, csvsep=csvsep, dec=dec, sheet=sheet.growth)
     }
-    if(data.format == "col"){
-      dat <- t(dat)
-    }
+    # Test if growth data is in tidy format and convert into QurvE custom format
+    if(length(dat) > 1)
+      dat <- tidy_to_custom(df = dat, data.format = data.format)
+    # Remove explicit quotes
+    #dat <- gsub('\"', "", dat)
+
     # Convert time values
     if(!is.null(convert.time)){
 
@@ -101,12 +114,14 @@ read_data <-
       dat[1, -(1:3)] <- time_converted
     }
     # Remove all-NA data series
-    allNA.ndx <- which(unlist(lapply(1:nrow(dat), function(x) all(is.na(dat[x, -(1:3)])))))
-    if(length(allNA.ndx) > 0)
-      dat <- dat[-allNA.ndx, ]
+    if(length(dat) > 1){
+      allNA.ndx <- which(unlist(lapply(1:nrow(dat), function(x) all(is.na(dat[x, -(1:3)])))))
+      if(length(allNA.ndx) > 0)
+        dat <- dat[-allNA.ndx, ]
+    }
 
     #remove leading and trailing zeros
-    if(length(dat)>0)
+    if(length(dat)>0 && !all(is.na(dat)))
       dat[,3] <- suppressWarnings(
         as.character(as.numeric(dat[,3]))
       )
@@ -124,9 +139,9 @@ read_data <-
         # Read table file
         fl <- read_file(data.fl, csvsep=csvsep.fl, dec=dec.fl, sheet=sheet.fl)
       }
-      if(data.format == "col"){
-        fl <- t(fl)
-      }
+      # Test if fluorescence data is in tidy format and convert into QurvE custom format
+      fl <- tidy_to_custom(df = fl, data.format = data.format)
+
       if(!(any(grepl("time", unlist(fl[,1]), ignore.case = TRUE)))){
         if(data.format == "col"){
           stop("Could not find 'time' in column 1 of data.fl")
@@ -163,9 +178,9 @@ read_data <-
         # Read table file
         fl2 <- read_file(data.fl2, csvsep=csvsep.fl2, dec=dec.fl2, sheet=sheet.fl2)
       }
-      if(data.format == "col"){
-        fl2 <- t(fl2)
-      }
+      # Test if fluorescence data is in tidy format and convert into QurvE custom format
+      fl2 <- tidy_to_custom(df = fl2, data.format = data.format)
+
       if(!(any(grepl("time", unlist(fl2[,1]), ignore.case = TRUE)))){
         if(data.format == "col"){
           stop("Could not find 'time' in column 1 of data.fl2")
@@ -435,8 +450,7 @@ read_data <-
       dat.mat <- create_datmat(dat, time.ndx=time.ndx)
       if(ncol(dat.mat) == 1) dat.mat <- t(dat.mat)
       dat.mat[,1] <- gsub("\\n\\r|\\n|\\r", "", dat.mat[,1])
-    }
-    else{
+    } else{
       dat.mat <- NA
     }
     if((length(fl) > 1 ) || !is.na(data.fl)){fl.mat <- create_datmat(df=fl, time.ndx=time.ndx);  fl.mat[,1] <- gsub("\\n\\r|\\n|\\r", "", fl.mat[,1])}else{fl.mat <- NA}
@@ -603,6 +617,207 @@ read_data <-
     class(dataset) <- "grodata"
     invisible(dataset)
   }
+
+#' Convert a tidy data frame to a custom QurvE format
+#'
+#' This function converts a data frame in "tidy" format into the custom format used by QurvE (row format).
+#' The provided "tidy" data has columns for "Description", "Concentration", "Replicate", and "Values", with one
+#' row per time point and sample. Alternatively, the function converts data in custom QurvE column format into
+#' row format (if \code{data.format = "col"}).
+#'
+#' @param df A data frame in tidy format, containing "Time", "Description", and either "Values" or "Value" columns. Optionally, meta information provided in columns "Replicate" and "Concentration" is used.
+#' @param data.format (Character string) \code{"col"} (the default) or \code{"row"}. Only relevant if data is not provided in "tidy" format but has been prepared into the custom QurvE data format.
+#'
+#' @return A data frame in the custom format (row format) used by QurvE.
+#'
+#' @examples
+#' # Create a tidy data frame with two samples, five concentrations, three
+#' # replicates, and five time points
+#' samples <- c("Sample 1", "Sample 2")
+#' concentrations <- c(0.1, 0.5, 1, 2, 5)
+#' time_points <- c(1, 2, 3, 4, 5)
+#' n_replicates <- 3
+#'
+#' df <- expand.grid(
+#'    Description = c("Sample 1", "Sample 2"),
+#'    Concentration = c(0.1, 0.5, 1, 2, 5),
+#'    Time = c(1, 2, 3, 4, 5),
+#'    Replicate = 1:3)
+#'
+#' df$Value <- abs(rnorm(nrow(df)))
+#'
+#' df_formatted <- tidy_to_custom(df)
+#'
+#' @keywords internal
+#' @export
+tidy_to_custom <- function(df, data.format = "col"){
+  # Check if data is in "tidy" format
+  # Check if data contains the required headers in colnames or the first row
+  if((any(grepl("Time", colnames(df), ignore.case = T)) &&
+      any(grepl("Description", colnames(df), ignore.case = T)) &&
+      any(grepl("Values|Value", colnames(df), ignore.case = T))) ||
+     (any(grepl("Time", df[1,], ignore.case = T)) &&
+      any(grepl("Description", df[1,], ignore.case = T)) &&
+      any(grepl("Values|Value", df[1,], ignore.case = T)))
+  ){
+    tidy <- TRUE
+    # If identifiers in first row, convert to colnames
+    if(any(grepl("Time", df[1,], ignore.case = T)) ||
+       any(grepl("Description", df[1,], ignore.case = T)) ||
+       any(grepl("Values|Value", df[1,], ignore.case = T))){
+      colnames(df) <- df[1, ]
+      df <- df[-1, ]
+    }
+    colnames(df)[grep("Value", colnames(df))] <- "Values"
+    # If missing, add columns for "Replicate" and "Concentration"
+    if(!any(grepl("Replicate", colnames(df), ignore.case = T))){
+      df[, "Replicate"] <- rep(NA, nrow(df))
+    }
+    if(!any(grepl("Concentration", colnames(df), ignore.case = T))){
+      df[, "Concentration"] <- rep(NA, nrow(df))
+    }
+
+
+    # Convert tidy format to the custom QurvE format
+
+    # Create a unique identifier for each combination of Description, Concentration, and Replicate
+    df[["Group"]] <- paste(df$Description, df$Concentration, df$Replicate, sep = "_")
+
+    # Split the 'Time' column based on the unique identifier
+    time_split <- split(df[["Time"]], df[["Group"]])
+
+    # Create a list of subsets of 'df' based on the unique identifiers in 'time_split'
+    subsets_list <- lapply(unique(df[["Group"]]), function(x) {
+      subset(df, df[["Group"]] == x)
+    })
+
+    # Helper function to check if two data frames have identical 'Time' values
+    identical_time <- function(df1, df2) {
+      identical(df1$Time, df2$Time)
+    }
+
+    # Initialize an empty list to store combined data frames
+    combined_list <- list()
+
+    # Initialize a vector to track combined data frames
+    combined_flag <- rep(FALSE, length(subsets_list))
+
+    for (i in seq_along(subsets_list)) {
+      # Skip if the data frame is already combined
+      if (combined_flag[i]) {
+        next
+      }
+
+      df1 <- subsets_list[[i]]
+      matching_indices <- c(i)
+
+      # Check for matching 'Time' values in other data frames
+      for (j in (i+1):length(subsets_list)) {
+        if (!combined_flag[j] && identical_time(df1, subsets_list[[j]])) {
+          matching_indices <- c(matching_indices, j)
+          combined_flag[j] <- TRUE
+        }
+      }
+
+      # Combine the matching data frames
+      combined_df <- do.call(rbind, subsets_list[matching_indices])
+
+      # Add the combined data frame to the combined_list
+      combined_list[[length(combined_list) + 1]] <- combined_df
+
+      # Mark the current data frame as combined
+      combined_flag[i] <- TRUE
+    }
+
+    # Define helper function to convert into wide format
+    convert_to_wide <- function(df) {
+      df <- df[!is.na(df$Time), ]
+      # Find unique groups
+      unique_groups <- unique(df[["Group"]])
+
+      # Create an empty data frame with the required structure
+      df_wide <- data.frame(matrix(ncol = length(unique_groups) + 1, nrow = nrow(df)/length(unique_groups) + 2))
+      colnames(df_wide) <- c("Time", unique_groups)
+
+      # Add Time, Replicate, and Concentration values
+      time <- unique(df$Time)
+      time <- time[!is.na(time)]
+      df_wide$Time <- c(NA, NA, time)
+
+      for (group in unique_groups) {
+        group_df <- df[df[["Group"]] == group, ]
+        description <- as.character(unique(group_df$Description))
+        replicate <- as.integer(unique(group_df$Replicate))
+        concentration <- unique(group_df$Concentration)
+
+        # Add Description, Replicate, Concentration, and Values
+        df_wide[[group]] <- c(replicate, concentration, group_df$Values)
+        colnames(df_wide)[colnames(df_wide) == group] <- description
+      }
+
+      return(df_wide)
+    }
+
+
+    wide_list <- lapply(combined_list, convert_to_wide)
+
+    # Combine dataframes into a single dataframe in QurvE custom format
+    # Find the maximum number of rows among the data frames
+    max_rows <- max(sapply(wide_list, nrow))
+
+    # Add NA rows to each data frame to make them equal in length
+    equalize_rows <- function(df, max_rows) {
+      if (nrow(df) < max_rows) {
+        missing_rows <- max_rows - nrow(df)
+        na_rows <- data.frame(matrix(NA, ncol = ncol(df), nrow = missing_rows))
+        colnames(na_rows) <- colnames(df)
+        df <- rbind(df, na_rows)
+      }
+      return(df)
+    }
+
+    wide_list_equal_rows <- lapply(wide_list, equalize_rows, max_rows = max_rows)
+
+    # Combine data frames into a single data frame
+    # Custom function to merge two data frames with different column names
+    merge_data_frames <- function(df1, df2) {
+      common_rows <- min(nrow(df1), nrow(df2))
+      missing_rows_df1 <- nrow(df2) - nrow(df1)
+      missing_rows_df2 <- nrow(df1) - nrow(df2)
+
+      # Add NA rows to the shorter data frame
+      if (missing_rows_df1 > 0) {
+        na_rows_df1 <- data.frame(matrix(NA, ncol = ncol(df1), nrow = missing_rows_df1))
+        colnames(na_rows_df1) <- colnames(df1)
+        df1 <- rbind(df1, na_rows_df1)
+      } else if (missing_rows_df2 > 0) {
+        na_rows_df2 <- data.frame(matrix(NA, ncol = ncol(df2), nrow = missing_rows_df2))
+        colnames(na_rows_df2) <- colnames(df2)
+        df2 <- rbind(df2, na_rows_df2)
+      }
+
+      # Combine the data frames
+      combined_df <- cbind(df1, df2)
+
+      return(combined_df)
+    }
+
+    combined_wide_df <- Reduce(merge_data_frames, wide_list_equal_rows)
+
+    # Create a new data frame with the column headers as its first row
+    header_df <- data.frame(matrix(colnames(combined_wide_df), ncol = ncol(combined_wide_df), nrow = 1))
+    colnames(header_df) <- colnames(combined_wide_df)
+
+    # Bind the original data frame below the header data frame
+    df <- rbind(header_df, combined_wide_df)
+
+    df <- t(df)
+  }
+  else if(data.format == "col"){
+    df <- t(df)
+  }
+  return(df)
+}
 
 #'  Parse raw plate reader data and convert it to a format compatible with QurvE
 #'
@@ -821,7 +1036,7 @@ read_file <- function(filename, csvsep = ";", dec = ".", sheet = 1){
           stringsAsFactors = FALSE,
           fill = TRUE,
           na.strings = "",
-          quote = "",
+          quote = '',
           comment.char = "",
           check.names = FALSE,
           col.names = paste0("V", seq_len(ncols))
@@ -903,10 +1118,20 @@ parse_Gen5Gen6 <- function(input)
     read.data <- lapply(1:(length(read.ndx)-1), function(x) input[read.ndx[x]:(read.ndx[x+1]-3),2:(ncol)])
     read.data <- lapply(1:length(read.data), function(x) as.data.frame(read.data[[x]])[1:length(read.data[[x]][,1][read.data[[x]][,1]!=0][!is.na(read.data[[x]][,1][read.data[[x]][,1]!=0])]),])
     # Extract last read table
-    read.data[[length(read.ndx)]] <- data.frame(input[read.ndx[length(read.ndx)]:(read.ndx[length(read.ndx)]+length(read.data[[1]][[1]])-1),2:(ncol)])
-    read.data[[length(read.ndx)]] <- as.data.frame(read.data[[length(read.ndx)]])[1:length(read.data[[length(read.ndx)]][,1][read.data[[length(read.ndx)]][,1]!=0][!is.na(read.data[[length(read.ndx)]][,1][read.data[[length(read.ndx)]][,1]!=0])]),]
+    read.data[[length(read.ndx)]] <- data.frame(input[read.ndx[length(read.ndx)]:(read.ndx[length(read.ndx)]+length(read.data[[1]][[1]])),2:(ncol)])
+    #read.data[[length(read.ndx)]] <- as.data.frame(read.data[[length(read.ndx)]])[1:length(read.data[[length(read.ndx)]][,1][read.data[[length(read.ndx)]][,1]!=0][!is.na(read.data[[length(read.ndx)]][,1][read.data[[length(read.ndx)]][,1]!=0])]),]
+    for( i in 1:length(read.data) ){
+      if(any(is.na(suppressWarnings(as.numeric(read.data[[i]][-1,2]))))){
+        read.data[[i]] <- suppressWarnings(read.data[[i]][1:which(is.na(as.numeric(read.data[[i]][-1,2])))[1], ])
+      }
+    }
   } else {
-    read.data[[1]] <- data.frame(input[read.ndx:(read.ndx + match(NA, input[read.ndx:nrow(input),3])-2),2:(1+ncol)])
+    if(!any(is.na(input[read.ndx:nrow(input),3]))){
+      read.data[[1]] <- data.frame(input[read.ndx:nrow(input),2:(1+ncol)])
+    }
+    else {
+      read.data[[1]] <- data.frame(input[read.ndx:(read.ndx + match(NA, input[read.ndx:nrow(input),3])-2),2:(1+ncol)])
+    }
   }
   # Remove time points with NA in all samples
   for(i in 1:length(read.data))
@@ -1109,9 +1334,19 @@ parse_tecan <- function(input)
     read.data <- lapply(1:length(read.data), function(x) as.data.frame(read.data[[x]])[1:length(read.data[[x]][,1][read.data[[x]][,1]!=0][!is.na(read.data[[x]][,1][read.data[[x]][,1]!=0])]), ])
     # Extract last read table
     read.data[[length(read.ndx)]] <- t(data.frame(input[read.ndx[length(read.ndx)]:(read.ndx[length(read.ndx)]+length(read.data[[1]][[1]])-1), 1:(ncol)]))
-    read.data[[length(read.ndx)]] <- as.data.frame(read.data[[length(read.ndx)]])[1:length(read.data[[length(read.ndx)]][,1][read.data[[length(read.ndx)]][,1]!=0][!is.na(read.data[[length(read.ndx)]][,1][read.data[[length(read.ndx)]][,1]!=0])]),]
+    #read.data[[length(read.ndx)]] <- as.data.frame(read.data[[length(read.ndx)]])[1:length(read.data[[length(read.ndx)]][,1][read.data[[length(read.ndx)]][,1]!=0][!is.na(read.data[[length(read.ndx)]][,1][read.data[[length(read.ndx)]][,1]!=0])]),]
+    for( i in 1:length(read.data) ){
+      if(any(is.na(suppressWarnings(as.numeric(read.data[[i]][-1,2]))))){
+        read.data[[i]] <- suppressWarnings(read.data[[i]][1:which(is.na(as.numeric(read.data[[i]][-1,2])))[1], ])
+      }
+    }
   } else {
-    read.data[[1]] <- t(data.frame(input[read.ndx:(read.ndx + match(NA, input[read.ndx:nrow(input),3])-2), 1:(ncol)]))
+    if(!any(is.na(input[read.ndx:nrow(input),3]))){
+      read.data[[1]] <- t(data.frame(input[read.ndx:nrow(input),2:(1+ncol)]))
+    }
+    else {
+      read.data[[1]] <- t(data.frame(input[read.ndx:(read.ndx + match(NA, input[read.ndx:nrow(input),3])-2), 1:(ncol)]))
+    }
   }
   # Remove temperature columns
   for(i in 1:length(read.data))

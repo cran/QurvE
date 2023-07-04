@@ -27,10 +27,10 @@
 #'
 #' @examples
 #' # load example dataset
-#' input <- read_data(data.growth = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    data.fl = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    sheet.growth = 1,
-#'                    sheet.fl = 2 )
+#' input <- read_data(data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+#'                    data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+#'                    csvsep = "\t",
+#'                    csvsep.fl = "\t")
 #'
 #' # Extract time and normalized fluorescence data for single sample
 #' time <- input$time[4,]
@@ -52,6 +52,9 @@ plot.flFitLinear <- function(x, log="", which=c("fit", "diagnostics", "fit_diagn
                              width = ifelse(which=="fit", 9, 9), out.dir = NULL, ...)
   {
   flFittedLinear <- x
+  if(!is.null(color))
+    colSpline <- toupper(color)
+
   if(methods::is(flFittedLinear) != "flFitLinear") stop("x needs to be an object created with flFitLinear().")
   which <- match.arg(which)
   control <- flFittedLinear$control
@@ -321,10 +324,10 @@ plot.flFitLinear <- function(x, log="", which=c("fit", "diagnostics", "fit_diagn
 #'
 #' @examples
 #' # load example dataset
-#' input <- read_data(data.growth = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    data.fl = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    sheet.growth = 1,
-#'                    sheet.fl = 2 )
+#' input <- read_data(data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+#'                    data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+#'                    csvsep = "\t",
+#'                    csvsep.fl = "\t")
 #'
 #' # Extract time and normalized fluorescence data for single sample
 #' time <- input$time[4,]
@@ -346,6 +349,11 @@ plot.flFitSpline <- function(x, add=FALSE, raw = TRUE, slope=TRUE, deriv = TRUE,
                              out.dir = NULL, ...)
   {
   flFitSpline <- x
+  if(!is.null(colSpline))
+    colSpline <- toupper(colSpline)
+  if(!is.null(colData))
+    colData <- toupper(colData)
+
   n.ybreaks <- as.numeric(n.ybreaks)
   # x an object of class flFitSpline
   if(methods::is(flFitSpline) != "flFitSpline") stop("x needs to be an object created with flFitSpline().")
@@ -1005,10 +1013,10 @@ plot.flFitSpline <- function(x, add=FALSE, raw = TRUE, slope=TRUE, deriv = TRUE,
 #'
 #' @examples
 #' # load example dataset
-#' input <- read_data(data.growth = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    data.fl = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    sheet.growth = 1,
-#'                    sheet.fl = 2 )
+#' input <- read_data(data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+#'                    data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+#'                    csvsep = "\t",
+#'                    csvsep.fl = "\t")
 #'
 #' # Extract time and normalized fluorescence data for single sample
 #' time <- input$time[4,]
@@ -1031,6 +1039,11 @@ plot.flBootSpline <- function(x, pch = 1, colData=1, deriv = TRUE,
                               height = 7, width = 9, out.dir = NULL, combine = FALSE, ...)
 {
   flBootSpline <- x
+  if(!is.null(colSpline))
+    colSpline <- toupper(colSpline)
+  if(!is.null(colData))
+    colData <- toupper(colData)
+
   colSpline <- ggplot2::alpha(colSpline, 0.2)
   # flBootSpline an object of class flBootSpline
   if(methods::is(flBootSpline) != "flBootSpline") stop("x needs to be an object created with flBootSpline().")
@@ -1411,6 +1424,11 @@ plot.drFitFLModel <- function(x, ec50line = TRUE, broken = TRUE,
   opar <- par(no.readonly = TRUE)
   on.exit(par(opar))
   drFittedFLModel <- x
+  if(!is.null(colSpline))
+    colSpline <- toupper(colSpline)
+  if(!is.null(colData))
+    colData <- toupper(colData)
+
   # drFittedFLModel an object of class drFittedFLModel
   if(methods::is(drFittedFLModel) != "drFitFLModel") stop("x needs to be an object created with fl.drFitModel().")
   # /// check input parameters
@@ -1725,10 +1743,10 @@ plot.drFitFLModel <- function(x, ec50line = TRUE, broken = TRUE,
 #' @examples
 #' \donttest{
 #' # load example dataset
-#' input <- read_data(data.growth = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    data.fl = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    sheet.growth = 1,
-#'                    sheet.fl = 2 )
+#' input <- read_data(data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+#'                    data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+#'                    csvsep = "\t",
+#'                    csvsep.fl = "\t")
 #'
 #' # Run workflow
 #' res <- fl.workflow(grodata = input, ec50 = FALSE, fit.opt = "s",
@@ -1774,6 +1792,9 @@ plot.flFitRes <-  function(x,
 )
 {
   object <- x
+  if(!is.null(colors))
+    colSpline <- toupper(colors)
+
   # Convert range  and selecting arguments
   names <- unlist(str_split(gsub("[;,][[:space:]]+", ";", gsub("[[:space:]]+[;,]", ";", names)), pattern = ";"))
   conc <- unlist(str_split(gsub("[;,][[:space:]]+", ";", gsub("[[:space:]]+[;,]", ";", conc)), pattern = "[;,]"))
@@ -1857,14 +1878,14 @@ plot.flFitRes <-  function(x,
   else {
     if(!is.null(names)  && length(names) > 0){
       if(!is.na(names) && names != ""){
-        names <- gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1",  names)
+        names <- gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", names)
         nm <- nm[grep(paste(names, collapse="|"), nm)]
       }
     }
     if(!is.null(exclude.nm)  && length(exclude.nm) > 0){
       if(!is.na(exclude.nm) && exclude.nm != ""){
         names.excl <- gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", exclude.nm)
-        nm <- nm[!grepl(paste(names.excl, collapse="|"), gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", nm))]
+        nm <- nm[!grepl(paste(names.excl, collapse="|"), gsub(" \\|.+", "", nm))]
       }
     }
   }
@@ -2465,10 +2486,10 @@ plot.flFitRes <-  function(x,
 #' @return A plot with all curves (raw fluorescence measurements or raw normalized fluorescence over time) in a \code{flFit} object with \code{\link{flFit}}, with replicates combined by the group averages (if \code{mean = TRUE}) or not (\code{mean = FALSE}).
 #' @examples
 #' # load example dataset
-#' input <- read_data(data.growth = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    data.fl = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    sheet.growth = 1,
-#'                    sheet.fl = 2 )
+#' input <- read_data(data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+#'                    data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+#'                    csvsep = "\t",
+#'                    csvsep.fl = "\t")
 #'
 #' # Run curve fitting workflow
 #' res <- flFit(fl_data = input$norm.fluorescence,
@@ -2525,10 +2546,10 @@ plot.flFit <- plot.flFitRes
 #'
 #' @examples
 #' # load example dataset
-#' input <- read_data(data.growth = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    data.fl = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    sheet.growth = 1,
-#'                    sheet.fl = 2 )
+#' input <- read_data(data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+#'                    data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+#'                    csvsep = "\t",
+#'                    csvsep.fl = "\t")
 #'
 #' # Run workflow
 #' res <- fl.workflow(grodata = input, ec50 = FALSE, fit.opt = "s",
@@ -2574,6 +2595,9 @@ plot.dual <-  function(x,
 )
 {
   object <- x
+  if(!is.null(colors))
+    colSpline <- toupper(colors)
+
   # Convert range  and selecting arguments
   x.lim <- unlist(str_split(gsub("[;,][[:space:]]+", ";", gsub("[[:space:]]+[;,]", ";", x.lim)), pattern = ";|,"))
   y.lim.fl <- unlist(str_split(gsub("[;,][[:space:]]+", ";", gsub("[[:space:]]+[;,]", ";", y.lim.fl)), pattern = ";|,"))
@@ -3155,10 +3179,10 @@ plot.dual <-  function(x,
 #'
 #' @examples
 #' # load example dataset
-#' input <- read_data(data.growth = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    data.fl = system.file("lac_promoters.xlsx", package = "QurvE"),
-#'                    sheet.growth = 1,
-#'                    sheet.fl = 2 )
+#' input <- read_data(data.growth = system.file("lac_promoters_growth.txt", package = "QurvE"),
+#'                    data.fl = system.file("lac_promoters_fluorescence.txt", package = "QurvE"),
+#'                    csvsep = "\t",
+#'                    csvsep.fl = "\t")
 #'
 #' # Define fit controls
 #' control <- fl.control(fit.opt = "s",
@@ -3185,6 +3209,10 @@ plot.drFitfl <- function(x, ec50line = TRUE, log = c("xy"), pch = 1, broken = TR
                          height = 7, width = 9, out.dir = NULL, ...)
 {
   drFitfl <- x
+  if(!is.null(colSpline))
+    colSpline <- toupper(colSpline)
+  if(!is.null(colData))
+    colData <- toupper(colData)
   # x an object of class drFitfl
   if(methods::is(drFitfl) != "drFitfl") stop("x needs to be an object of class 'drFitfl', created with fl.drFit(control=fl.control(dr.method='model').")
   if(length(drFitfl) == 1) stop("drFitfl is NA. Please run fl.drFit() with dr.method = 'model' in the control object.")
