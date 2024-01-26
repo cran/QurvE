@@ -622,14 +622,25 @@ plot.gcFitModel <- function(x, raw = TRUE,
     out.dir <- ifelse(is.null(out.dir), paste0(getwd(), "/Plots"), out.dir)
     dir.create(out.dir, showWarnings = FALSE)
 
-    grDevices::png(paste0(out.dir, "/", paste(gcFittedModel$gcID, collapse = "_"), "_ModelFitPlot.png"),
-                   width = w, height = h, units = 'in', res = 300)
-    suppressWarnings( print(p) )
-    grDevices::dev.off()
+    tryCatch({
+      grDevices::png(paste0(out.dir, "/", paste(gcFittedModel$gcID, collapse = "_"), "_ModelFitPlot.png"),
+                     width = w, height = h, units = 'in', res = 300)
+      suppressWarnings(print(p))
+    }, finally = {
+      grDevices::dev.off() # Ensure the device is closed
+    })
 
-    grDevices::cairo_pdf(width = w, height = h, file = paste0(out.dir, "/", paste(gcFittedModel$gcID, collapse = "_"), "_ModelFitPlot.pdf"))
-    suppressWarnings( print(p) )
-    grDevices::dev.off()
+    tryCatch({
+      if (requireNamespace("Cairo", quietly = TRUE)) {
+        Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", paste(gcFittedModel$gcID, collapse = "_"), "_ModelFitPlot.pdf"))
+      } else {
+        message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
+        grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", paste(gcFittedModel$gcID, collapse = "_"), "_ModelFitPlot.pdf"))
+      }
+      suppressWarnings(print(p))
+    }, finally = {
+      grDevices::dev.off() # Ensure the device is closed
+    })
   }
   if (plot == TRUE){
     suppressWarnings( print(p) )
@@ -1028,7 +1039,7 @@ plot.drBootSpline <- function (x,
 
 #' Generic plot function for \code{drFit} objects.
 #'
-#' code{plot.drFit} calls code{plot.drFitSpline} for each group used in a dose-response analysis
+#' \code{plot.drFit} calls \code{plot.drFitSpline} for each group used in a dose-response analysis
 #'
 #' @param x object of class \code{drFit}, created with \code{\link{growth.drFit}}.
 #' @param combine (Logical) Combine the dose-response analysis results of all conditions into a single plot (\code{TRUE}) or not (\code{FALSE}).
@@ -1295,18 +1306,26 @@ plot.drFit <- function(x, combine = TRUE, names = NULL, exclude.nm = NULL, pch =
           h <- height
         }
         dir.create(out.dir, showWarnings = FALSE)
-        grDevices::png(paste0(out.dir, "/", out.nm, ".png"),
-                       width = w, height = h, units = 'in', res = 300)
-        print(p)
-        grDevices::dev.off()
-        if (requireNamespace("Cairo", quietly = TRUE)) {
-          Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-        } else {
-          message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
-          grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-        }
-        print(p)
-        grDevices::dev.off()
+
+        tryCatch({
+          grDevices::png(paste0(out.dir, "/", out.nm, ".png"),
+                         width = w, height = h, units = 'in', res = 300)
+          suppressWarnings(print(p))
+        }, finally = {
+          grDevices::dev.off() # Ensure the device is closed
+        })
+
+        tryCatch({
+          if (requireNamespace("Cairo", quietly = TRUE)) {
+            Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
+          } else {
+            message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
+            grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
+          }
+          suppressWarnings(print(p))
+        }, finally = {
+          grDevices::dev.off() # Ensure the device is closed
+        })
 
         message(paste0("drFit plots exported to: ", out.dir, "/", out.nm))
       }
@@ -1330,7 +1349,7 @@ plot.drFit <- function(x, combine = TRUE, names = NULL, exclude.nm = NULL, pch =
 
 #' Generic plot function for \code{drFitSpline} objects.
 #'
-#' code{plot.drFitSpline} generates the spline fit plot for response-parameter vs. concentration data
+#' \code{plot.drFitSpline} generates the spline fit plot for response-parameter vs. concentration data
 #'
 #' @param x object of class \code{drFitSpline}, created with \code{\link{growth.drFitSpline}}.
 #' @param add (Logical) Shall the fitted spline be added to an existing plot? \code{TRUE} is used internally by \code{\link{plot.drBootSpline}}.
@@ -2224,7 +2243,7 @@ plot.gcBootSpline <- function(x, pch = 1, colData=1, deriv = TRUE,
 
 #' Generic plot function for \code{gcFitSpline} objects.
 #'
-#' code{plot.gcFitSpline} generates the spline fit plot for a single sample.
+#' \code{plot.gcFitSpline} generates the spline fit plot for a single sample.
 #'
 #' @param x object of class \code{gcFitSpline}, created with \code{\link{growth.gcFitSpline}}.
 #' @param add (Logical) Shall the fitted spline be added to an existing plot? \code{TRUE} is used internally by \code{\link{plot.gcBootSpline}}.
@@ -2885,18 +2904,28 @@ plot.gcFitSpline <- function(x, add=FALSE, raw = TRUE, slope=TRUE, deriv = TRUE,
       h <- height
       out.dir <- ifelse(is.null(out.dir), paste0(getwd(), "/Plots"), out.dir)
       dir.create(out.dir, showWarnings = FALSE)
-      grDevices::png(paste0(out.dir, "/", paste(gcFittedSpline$gcID, collapse = "_"), "_SplineFit.png"),
-                     width = w, height = h, units = 'in', res = 300)
-      suppressWarnings(print(p))
-      grDevices::dev.off()
-      if (requireNamespace("Cairo", quietly = TRUE)) {
-        Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", paste(gcFittedSpline$gcID, collapse = "_"), "_SplineFit.pdf"))
-      } else {
-        message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
-        grDevices::pdf(idth = w, height = h, file = paste0(out.dir, "/", paste(gcFittedSpline$gcID, collapse = "_"), "_SplineFit.pdf"))
-      }
-      suppressWarnings(print(p))
-      grDevices::dev.off()
+
+      tryCatch({
+        grDevices::png(paste0(out.dir, "/", paste(gcFittedSpline$gcID, collapse = "_"), "_SplineFit.png"),
+                       width = w, height = h, units = 'in', res = 300)
+        suppressWarnings(print(p))
+      }, finally = {
+        grDevices::dev.off() # Ensure the device is closed
+      })
+
+      tryCatch({
+        if (requireNamespace("Cairo", quietly = TRUE)) {
+          Cairo::CairoPDF(width = w, height = h,
+                          file = paste0(out.dir, "/", paste(gcFittedSpline$gcID, collapse = "_"), "_SplineFit.pdf"))
+        } else {
+          message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
+          grDevices::pdf(width = w, height = h,
+                         file = paste0(out.dir, "/", paste(gcFittedSpline$gcID, collapse = "_"), "_SplineFit.pdf"))
+        }
+        suppressWarnings(print(p))
+      }, finally = {
+        grDevices::dev.off() # Ensure the device is closed
+      })
     }
     if (plot == TRUE){
       suppressWarnings(print(p))
@@ -3189,7 +3218,7 @@ plot.grofit <- function(x, ...,
         data.deriv <- as.list(lapply(1:length(ndx), function(i) cbind(grofit$gcFit$gcFittedSplines[[ndx[[i]]]]$spline.deriv1$y)))
       }
       # correct for unequal lengths of data series
-      time.all <- Reduce(union, time)
+      time.all <- sort(Reduce(union, time))
       for(i in 1:length(time)){
         assign(paste0("time.missing_", i), setdiff(time.all, time[[i]]) )
         if(length(get(paste0("time.missing_", i))) > 0){
@@ -3209,7 +3238,7 @@ plot.grofit <- function(x, ...,
       }
       if(deriv){
         # correct for unequal lengths of derivative series and harmonize the time values.
-        time.all <- Reduce(union, time.deriv)
+        time.all <- sort(Reduce(union, time.deriv))
         for(i in 1:length(time.deriv)){
           assign(paste0("time.missing_", i), setdiff(time.all, time.deriv[[i]]) )
           if(length(get(paste0("time.missing_", i))) > 0){
@@ -3228,14 +3257,22 @@ plot.grofit <- function(x, ...,
       }
       time <- time[[1]]
       data <- do.call("cbind", data)
-      avg <- rowMeans(data, na.rm = FALSE)
-      sd <- apply(data, 1, sd, na.rm = FALSE)
+      na_rows_indices <- which(apply(data, 1, function(x) all(is.na(x))))
+      if(length(na_rows_indices) > 0)
+        time <- time[-na_rows_indices]
+      data <- data[!apply(data, 1, function(x) all(is.na(x))), , drop = FALSE]
+      avg <- rowMeans(data, na.rm = TRUE)
+      sd <- apply(data, 1, sd, na.rm = TRUE)
       plotdata.ls[[n]] <- data.frame("name" = name, "time" = time, "mean" = avg, "upper" = avg+sd, "lower" = avg-sd)
       if(deriv){
         time.deriv <- time.deriv[[1]]
         data.deriv <- do.call("cbind", data.deriv)
-        avg.deriv <- rowMeans(data.deriv, na.rm = FALSE)
-        sd.deriv <- apply(data.deriv, 1, sd, na.rm = FALSE)
+        na_rows_indices.deriv <- which(apply(data.deriv, 1, function(x) all(is.na(x))))
+        if(length(na_rows_indices.deriv) > 0)
+          time.deriv <- time.deriv[-na_rows_indices.deriv]
+        data.deriv <- data.deriv[!apply(data.deriv, 1, function(x) all(is.na(x))), , drop = FALSE]
+        avg.deriv <- rowMeans(data.deriv, na.rm = TRUE)
+        sd.deriv <- apply(data.deriv, 1, sd, na.rm = TRUE)
         deriv.ls[[n]] <- data.frame("name" = name, "time" = time.deriv, "mean" = avg.deriv, "upper" = avg.deriv+sd.deriv, "lower" = avg.deriv-sd.deriv)
       }
     }
@@ -3244,9 +3281,14 @@ plot.grofit <- function(x, ...,
       names(deriv.ls) <- gsub(" \\| NA", "", conditions_unique)
       deriv.ls <- deriv.ls[!is.na(deriv.ls)]
       df.deriv <- do.call(rbind.data.frame, deriv.ls)
-      df.deriv$name <- gsub(" \\| NA", "", df.deriv$name)
+      all_conc_na <- all(gsub(".+ \\| ", "", df.deriv$name)=="NA")
 
-      df.deriv$concentration <- as.numeric(gsub(".+ \\| ", "", df.deriv$name))
+      if(!all_conc_na){
+        df.deriv$concentration <- as.numeric(gsub(".+ \\| ", "", df.deriv$name))
+      } else {
+        df.deriv$concentration <- rep(NA, length(df.deriv$name))
+      }
+      df.deriv$name <- gsub(" \\| NA", "", df.deriv$name)
       df.deriv$group <- gsub(" \\| .+", "", df.deriv$name)
 
       # sort names
@@ -3257,8 +3299,13 @@ plot.grofit <- function(x, ...,
 
     plotdata.ls <- plotdata.ls[!is.na(plotdata.ls)]
     df <- do.call(rbind.data.frame, plotdata.ls)
+    all_conc_na <- all(gsub(".+ \\| ", "", df$name)=="NA")
+    if(!all_conc_na){
+      df$concentration <- as.numeric(gsub(".+ \\| ", "", df$name))
+    } else {
+      df$concentration <- rep(NA, length(df$name))
+    }
     df$name <- gsub(" \\| NA", "", df$name)
-    df$concentration <- as.numeric(gsub(".+ \\| ", "", df$name))
     df$group <- gsub(" \\| .+", "", df$name)
 
     # replace negative lower ribbon boundaries with 0 for log10 transformation
@@ -3587,7 +3634,7 @@ plot.grofit <- function(x, ...,
   if(export == FALSE && plot == FALSE){
     return(p)
   }
-  out.dir <- ifelse(is.null(out.dir), paste0(getwd(), "/Plots"), out.dir)
+
   if (export == TRUE){
     if(is.null(out.nm)) out.nm <- paste0("GroupPlot")
     if(is.null(width)){
@@ -3600,24 +3647,34 @@ plot.grofit <- function(x, ...,
     } else {
       h <- height
     }
+    out.dir <- ifelse(is.null(out.dir), paste0(getwd(), "/Plots"), out.dir)
     dir.create(out.dir, showWarnings = FALSE)
-    grDevices::png(paste0(out.dir, "/", out.nm, ".png"),
-                   width = w, height = h, units = 'in', res = 300)
-    suppressWarnings(print(p))
-    grDevices::dev.off()
-    if (requireNamespace("Cairo", quietly = TRUE)) {
-      Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-    } else {
-      message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
-      grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-    }
-    suppressWarnings(print(p))
-    grDevices::dev.off()
+    png_filename <- paste0(out.dir, "/", out.nm, ".png")
+    pdf_filename <- paste0(out.dir, "/", out.nm, ".pdf")
+
+    tryCatch({
+      grDevices::png(png_filename, width = w, height = h, units = 'in', res = 300)
+      suppressWarnings(print(p))
+    }, finally = {
+      grDevices::dev.off() # Ensure the device is closed
+    })
+
+    tryCatch({
+      if (requireNamespace("Cairo", quietly = TRUE)) {
+        Cairo::CairoPDF(width = w, height = h, file = pdf_filename)
+      } else {
+        message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
+        grDevices::pdf(width = w, height = h, file = pdf_filename)
+      }
+      suppressWarnings(print(p))
+    }, finally = {
+      grDevices::dev.off() # Ensure the device is closed
+    })
   }
   if (plot == TRUE){
     suppressWarnings(print(p))
   } else {
-    return(p)
+    invisible(return(p))
   }
 }
 
@@ -4138,18 +4195,26 @@ plot.parameter <- function(x, param = c('mu.linfit', 'lambda.linfit', 'dY.linfit
     h <- height
     out.dir <- ifelse(is.null(out.dir), paste0(getwd(), "/Plots"), out.dir)
     dir.create(out.dir, showWarnings = FALSE)
-    grDevices::png(paste0(out.dir, "/", out.nm, ".png"),
-                   width = w, height = h, units = 'in', res = 300)
-    print(p)
-    grDevices::dev.off()
-    if (requireNamespace("Cairo", quietly = TRUE)) {
-      Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-    } else {
-      message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
-      grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-    }
-    print(p)
-    grDevices::dev.off()
+
+    tryCatch({
+      grDevices::png(paste0(out.dir, "/", out.nm, ".png"),
+                     width = w, height = h, units = 'in', res = 300)
+      suppressWarnings(print(p))
+    }, finally = {
+      grDevices::dev.off() # Ensure the device is closed
+    })
+
+    tryCatch({
+      if (requireNamespace("Cairo", quietly = TRUE)) {
+        Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
+      } else {
+        message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
+        grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
+      }
+      suppressWarnings(print(p))
+    }, finally = {
+      grDevices::dev.off() # Ensure the device is closed
+    })
   }
   if (plot == TRUE){
     print(p)
@@ -4314,18 +4379,26 @@ plot.dr_parameter <- function(x, param = c('EC50', 'EC50.Estimate', 'y.max', 'y.
       h <- height
       out.dir <- ifelse(is.null(out.dir), paste0(getwd(), "/Plots"), out.dir)
       dir.create(out.dir, showWarnings = FALSE)
-      grDevices::png(paste0(out.dir, "/", out.nm, ".png"),
-                     width = w, height = h, units = 'in', res = 300)
-      print(p)
-      grDevices::dev.off()
-      if (requireNamespace("Cairo", quietly = TRUE)) {
-        Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-      } else {
-        message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
-        grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-      }
-      print(p)
-      grDevices::dev.off()
+
+      tryCatch({
+        grDevices::png(paste0(out.dir, "/", out.nm, ".png"),
+                       width = w, height = h, units = 'in', res = 300)
+        suppressWarnings(print(p))
+      }, finally = {
+        grDevices::dev.off() # Ensure the device is closed
+      })
+
+      tryCatch({
+        if (requireNamespace("Cairo", quietly = TRUE)) {
+          Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
+        } else {
+          message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
+          grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
+        }
+        suppressWarnings(print(p))
+      }, finally = {
+        grDevices::dev.off() # Ensure the device is closed
+      })
   }
   if (plot == TRUE){
     print(p)
@@ -4338,7 +4411,7 @@ plot.dr_parameter <- function(x, param = c('EC50', 'EC50.Estimate', 'y.max', 'y.
 #'
 #' \code{plot.grid} takes a \code{grofit} or \code{flFitRes} object and returns a facet grid of individual growth and fluorescence plots
 #'
-#' @param x A \code{grofit} or \code{flFitRes} object created with \code{\link{growth.workflow}} or code{\link{fl.workflow}} containing spline fits.
+#' @param x A \code{grofit} or \code{flFitRes} object created with \code{\link{growth.workflow}} or \code{\link{fl.workflow}} containing spline fits.
 #' @param data.type (Character) Plot either raw data (\code{data.type = "raw"}) or the spline fit results
 #' @param param (Character) The parameter used to compare different sample groups. Any name of a column containing numeric values in \code{gcTable} (which is stored within \code{grofit} or \code{gcFit} objects) can be used as input. Useful options are:
 #' 'mu.linfit', 'lambda.linfit', 'dY.linfit', 'A.linfit',
@@ -4682,7 +4755,7 @@ plot.grid <- function(x,
       }
 
       # correct for unequal lengths of data series
-      time.all <- Reduce(union, time)
+      time.all <- sort(Reduce(union, time))
       for(i in 1:length(time)){
         assign(paste0("time.missing_", i), setdiff(time.all, time[[i]]) )
         if(length(get(paste0("time.missing_", i))) > 0){
@@ -4707,10 +4780,14 @@ plot.grid <- function(x,
       }
       time <- time[[1]]
       data <- do.call("cbind", data)
-      avg <- rowMeans(data, na.rm = FALSE)
-      sd <- apply(data, 1, sd, na.rm = FALSE)
+      na_rows_indices <- which(apply(data, 1, function(x) all(is.na(x))))
+      if(length(na_rows_indices) > 0)
+        time <- time[-na_rows_indices]
+      data <- data[!apply(data, 1, function(x) all(is.na(x))), , drop = FALSE]
+      avg <- rowMeans(data, na.rm = TRUE)
+      sd <- apply(data, 1, sd, na.rm = TRUE)
       parameter <- do.call("cbind", parameter)
-      avg.param <- rowMeans(parameter, na.rm = FALSE)
+      avg.param <- rowMeans(parameter, na.rm = TRUE)
       plotdata.ls[[n]] <- data.frame("name" = name, "time" = time, "mean" = avg, "upper" = avg+sd, "lower" = avg-sd, "mean.param" = avg.param)
     }
     names(plotdata.ls) <- gsub(" \\| NA", "", conditions_unique)
@@ -5256,18 +5333,26 @@ plot.grid <- function(x,
       h <- height
     }
     dir.create(out.dir, showWarnings = FALSE)
-    grDevices::png(paste0(out.dir, "/", out.nm, ".png"),
-                   width = w, height = h, units = 'in', res = 300)
-    suppressWarnings(print(p))
-    grDevices::dev.off()
-    if (requireNamespace("Cairo", quietly = TRUE)) {
-      Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-    } else {
-      message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
-      grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
-    }
-    suppressWarnings( print(p))
-    grDevices::dev.off()
+
+    tryCatch({
+      grDevices::png(paste0(out.dir, "/", out.nm, ".png"),
+                     width = w, height = h, units = 'in', res = 300)
+      suppressWarnings(print(p))
+    }, finally = {
+      grDevices::dev.off() # Ensure the device is closed
+    })
+
+    tryCatch({
+      if (requireNamespace("Cairo", quietly = TRUE)) {
+        Cairo::CairoPDF(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
+      } else {
+        message("Package 'Cairo' must be installed to preserve special characters in the exported PDF image")
+        grDevices::pdf(width = w, height = h, file = paste0(out.dir, "/", out.nm, ".pdf"))
+      }
+      suppressWarnings(print(p))
+    }, finally = {
+      grDevices::dev.off() # Ensure the device is closed
+    })
   }
   if (plot == TRUE){
     suppressWarnings(print(p))

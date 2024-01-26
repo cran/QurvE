@@ -1,7 +1,7 @@
 Package: QurvE
 Title: Robust and User-Friendly Analysis of Growth and Fluorescence
         Curves
-Version: 1.1
+Version: 1.1.1
 Authors@R: c(
     person("Nicolas T.", "Wirth", , "mail.nicowirth@gmail.com", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0003-0799-1321")),
@@ -46,8 +46,8 @@ BugReports: https://github.com/NicWir/QurvE/issues
 Depends: dplyr, methods, R (>= 4.0), stringr, tidyr
 Imports: doParallel, drc, DT, foreach, ggh4x, ggnewscale, ggplot2,
         ggpubr, kableExtra, knitr, labeling, magrittr, minpack.lm,
-        plyr, RColorBrewer, readxl, rmarkdown, scales, shiny, stats,
-        utils
+        plyr, purrr, RColorBrewer, readxl, rmarkdown, scales, shiny,
+        stats, utils
 Suggests: bookdown, Cairo, htmltools, plotrix, prettydoc, rlang,
         shinyBS, shinycssloaders, shinyFiles, shinyjs, shinysurveys,
         shinythemes, testthat (>= 3.0.0), tibble, tinytex
@@ -62,7 +62,7 @@ Collate: 'QurvE-package.R' 'control_functions.R' 'data_parsers.R'
         'growth_workflows.R' 'linear_fits.R' 'nonparametric_fits.R'
         'parametric_fits.R' 'utils.R' 'report_functions.R'
         'shiny_app_functions.R'
-Packaged: 2023-07-04 13:09:16 UTC; ncw
+Packaged: 2024-01-26 12:06:01 UTC; ncw
 Author: Nicolas T. Wirth [aut, cre, cph]
     (<https://orcid.org/0000-0003-0799-1321>),
   Jonathan Funk [aut] (Co-developer of shiny app.),
@@ -89,4 +89,4 @@ Author: Nicolas T. Wirth [aut, cre, cph]
     app.)
 Maintainer: Nicolas T. Wirth <mail.nicowirth@gmail.com>
 Repository: CRAN
-Date/Publication: 2023-07-04 13:33:02 UTC
+Date/Publication: 2024-01-26 12:40:14 UTC

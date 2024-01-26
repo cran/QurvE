@@ -127,7 +127,7 @@ parse_properties_biolector <- function(file, csvsep=";", dec=".", sheet=1)
   # extract different read data in dataset
   time.ndx <- c(grep("^\\bWell\\b", input[,1], ignore.case = TRUE)+2, grep("^\\bChannel\\b", input[grep("^\\bWell\\b", input[,1], ignore.case = TRUE),], ignore.case = TRUE))
   # extract different read data in dataset
-  reads <- unique(input[,time.ndx[2]][grep("Biomass", input[,time.ndx[2]])])
+  reads <- unique(input[,time.ndx[2]][grep("Biomass|GFP|RFP|Fluorescence", input[,time.ndx[2]])])
   reads <- reads[!is.na(reads)]
   invisible(reads)
 }
@@ -258,7 +258,7 @@ parse_data_shiny <-
     }
 
     if(any(grep("Biolector", software, ignore.case = TRUE))){
-      parsed.ls <- parse_biolector_shiny(input, growth.nm = growth.nm)
+      parsed.ls <- parse_biolector_shiny(input, growth.nm = growth.nm, fl.nm = fl.nm, fl2.nm = fl2.nm)
       data.ls <- parsed.ls[[1]]
     }
 
@@ -273,7 +273,6 @@ parse_data_shiny <-
     }
 
     noNA.ndx <- which(!is.na(data.ls))
-
     # Convert time values
     if(!is.null(convert.time)){
 
@@ -294,6 +293,18 @@ parse_data_shiny <-
       }
     } else {
       data.ls <-data.ls[noNA.ndx]
+    }
+    if(!is.null(mapping)){
+      # Check if the first row of mapping contains the required values
+      required_values <- c("well", "id", "replicate", "concentration")
+      has_required_values <- any(tolower(as.character(unlist(mapping[1,]))) %in% required_values)
+
+      # If not, prepend a row with these values
+      if (!has_required_values) {
+        new_row <- data.frame(well = "well", ID = "ID", replicate = "replicate", concentration = "concentration")
+        colnames(new_row) <- colnames(mapping)[1:4]
+        mapping <- rbind(new_row, mapping)
+      }
     }
 
     # apply identifiers specified in mapping file
@@ -616,17 +627,18 @@ parse_tecan_shiny <- function(input, growth.nm, fl.nm, fl2.nm)
 #'
 #' @param input A dataframe created by reading a table file with \code{\link{read_file}}
 #' @param growth.nm Name of read corresponding to growth rate
+#' @param fl.nm,fl2.nm Name of read corresponding to fluorescence and fluorescence2 data
 #'
 #' @return a list of length two containing a growth dataframe in the first element and \code{NA} in the second. The first column in the dataframe represents a time vector.
 #'
 #' @keywords internal shiny_app
 #' @noRd
-parse_biolector_shiny <- function(input, growth.nm)
+parse_biolector_shiny <- function(input, growth.nm, fl.nm, fl2.nm)
 {
   # get index (row,column) for "Time:"
   time.ndx <- c(grep("^\\bWell\\b", input[,1], ignore.case = TRUE)+2, grep("^\\bChannel\\b", input[grep("^\\bWell\\b", input[,1], ignore.case = TRUE),], ignore.case = TRUE))
   # extract different read data in dataset
-  reads <- unique(input[,time.ndx[2]][grep("Biomass", input[,time.ndx[2]])])
+  reads <- unique(input[,time.ndx[2]][grep("Biomass|GFP|RFP|Fluorescence", input[,time.ndx[2]])])
   reads <- reads[!is.na(reads)]
   read.ndx <- lapply(1:length(reads), function(x) which(input[,time.ndx[2]] %in% reads[x]))
 
@@ -637,22 +649,22 @@ parse_biolector_shiny <- function(input, growth.nm)
     read.data <- lapply(1:length(read.ndx), function(x) input[read.ndx[[x]], -(1:time.ndx[2])])
     read.data <- lapply(1:length(read.data), function(x) t(as.data.frame(read.data[[x]])[1:length(read.data[[x]][,1][read.data[[x]][,1]!=0][!is.na(read.data[[x]][,1][read.data[[x]][,1]!=0])]), ]))
     # add Well or Content name
-    read.data <- lapply(1:length(read.data), function(x) if(all(gsub("[[:digit:]]+", "", input[read.ndx[[x]], 2]) == "X")){
-      rbind(t(data.frame(input[read.ndx[[x]], 1])), read.data[[x]])
-    } else {
-      rbind(t(data.frame(input[read.ndx[[x]], 2])), read.data[[x]])
-    }
-    )
+    #read.data <- lapply(1:length(read.data), function(x) if(all(gsub("[[:digit:]]+", "", input[read.ndx[[x]], 2]) == "X")){
+    #  rbind(t(data.frame(input[read.ndx[[x]], 1])), read.data[[x]])
+    #} else {
+    #  rbind(t(data.frame(input[read.ndx[[x]], 2])), read.data[[x]])
+    #}
+    read.data <- lapply(1:length(read.data), function(x) rbind(t(data.frame(input[read.ndx[[x]], 1])), read.data[[x]]))
     # add time column
     read.data <- lapply(1:length(read.data), function(x) cbind(t(data.frame(input[time.ndx[1], -(1:(time.ndx[2]-1))])), read.data[[x]]))
   } else {
     read.data[[1]] <- t(data.frame(input[read.ndx[[1]], -(1:time.ndx[2])]))
     # add Well or Content name
-    if(all(gsub("[[:digit:]]+", "", input[read.ndx[[1]], 2]) == "X")){
+    #if(all(gsub("[[:digit:]]+", "", input[read.ndx[[1]], 2]) == "X")){
       read.data[[1]] <- rbind(t(data.frame(input[read.ndx[[1]], 1])), read.data[[1]])
-    } else {
-      read.data[[1]] <- rbind(t(data.frame(input[read.ndx[[1]], 2])), read.data[[1]])
-    }
+    #} else {
+    #  read.data[[1]] <- rbind(t(data.frame(input[read.ndx[[1]], 2])), read.data[[1]])
+    #}
     # add time column
     read.data[[1]] <- cbind(t(data.frame(input[time.ndx[1], -(1:(time.ndx[2]-1))])), read.data[[1]])
   }
@@ -669,20 +681,30 @@ parse_biolector_shiny <- function(input, growth.nm)
   }
   names(read.data) <- reads
   data.ls <- list()
-  if(length(reads)>1){
+  #if(length(reads)>1){
+    if (!is.null(growth.nm) && growth.nm != "Ignore")
+      growth <- read.data[[match(growth.nm, reads)]]
+    else
+      growth  <- NA
 
-    growth <- read.data[[match(growth.nm, reads)]]
+    if(!is.null(fl.nm) && fl.nm != "Ignore"){
+      fluorescence <-  read.data[[match(fl.nm, reads)]]
+      fluorescence[which(fluorescence == "OVER", arr.ind = TRUE)] <- NA
+    }
+    else
+      fluorescence <- NA
+
+    if(!is.null(fl2.nm) && fl2.nm != "Ignore"){
+      fluorescence2 <-  read.data[[match(fl2.nm, reads)]]
+      fluorescence2[which(fluorescence2 == "OVER", arr.ind = TRUE)] <- NA
+    }
+    else
+      fluorescence2 <- NA
 
     data.ls[[1]] <- growth
-    data.ls[[2]] <- NA
-    # data.ls[[3]] <- NA
-
-  } else {
-    growth <- read.data[[1]]
-    data.ls[[1]] <- growth
-    data.ls[[2]] <- NA
-    # data.ls[[3]] <- NA
-  }
+    data.ls[[2]] <- fluorescence
+    data.ls[[3]] <- fluorescence2
+  #}
   invisible(list(data.ls))
 }
 
